@@ -4,100 +4,155 @@ using Word = Microsoft.Office.Interop.Word;
 
 internal static class Program
 {
-    // Return meaningful exit codes for automation:
-    // 0 = success
-    // 1 = configuration / validation error
-    // 2 = file not found
-    // 3 = permission denied
-    // 4 = IO error
-    // 5 = interop / COM error
-    // 99 = unexpected error
     private static int Main()
     {
-        Logger.Initialize(Path.Combine(AppContext.BaseDirectory, "logs", "mailmerge.log"));
-
         try
         {
-            Logger.Info("Starting MailMerge");
+            string configPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "Configuration.json");
 
-            string configPath = Path.Combine(AppContext.BaseDirectory, "Configuration.json");
             if (!File.Exists(configPath))
-                throw new FileNotFoundException("Configuration file not found.", configPath);
+            {
+                Log("✖", "Configuration.json [File not found]");
+                return 2;
+            }
 
-            Configuration configuration = ConfigurationLoader.Load(configPath)
-                ?? throw new InvalidOperationException("ConfigurationLoader returned null.");
+            Configuration configuration =
+                ConfigurationLoader.Load(configPath);
 
-            string templatePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, configuration.Template.Path));
-            string dataPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, configuration.Data.Path));
-            string outputPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, configuration.Output.Path));
+            Log("✔", "Configuration.json");
 
-            // Validate inputs early
+            string templatePath = Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory,
+                configuration.Template.Path));
+
+            string dataPath = Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory,
+                configuration.Data.Path));
+
+            string outputPath = Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory,
+                configuration.Output.Path));
+
             if (!File.Exists(templatePath))
-                throw new FileNotFoundException("Template file not found.", templatePath);
+            {
+                Log(
+                    "✖",
+                    $"{Path.GetFileName(templatePath)} [File not found]");
+
+                return 2;
+            }
+
             if (!File.Exists(dataPath))
-                throw new FileNotFoundException("Data file not found.", dataPath);
-            if (string.IsNullOrWhiteSpace(outputPath))
-                throw new InvalidOperationException("Output path is not configured.");
+            {
+                Log(
+                    "✖",
+                    $"{Path.GetFileName(dataPath)} [File not found]");
 
-            Logger.Info("Configuration validated", ("template", templatePath), ("data", dataPath), ("output", outputPath));
+                return 2;
+            }
 
-            MailMergeTable table = new ExcelImporter().Import(
-                dataPath,
-                configuration.Data.Sheet,
-                configuration.Data.Ranges,
-                configuration.Output.FilenameTemplate);
+            MailMergeTable table =
+                new ExcelImporter().Import(
+                    dataPath,
+                    configuration.Data.Sheet,
+                    configuration.Data.Ranges,
+                    configuration.Output.FilenameTemplate);
 
-            TableWriter.Write(Path.Combine(AppContext.BaseDirectory, "Table.json"), table);
+            Log("✔", Path.GetFileName(dataPath));
+
+            string tablePath =
+                Path.Combine(
+                    AppContext.BaseDirectory,
+                    "Table.json");
+
+            TableWriter.Write(
+                tablePath,
+                table);
+
+            Log("✔", "Table.json");
 
             if (table.RowCount == 0)
             {
-                Logger.Info("No rows to process - exiting");
+                Log("⚠", "Completed — no documents generated");
                 return 0;
             }
 
+            int generated = 0;
+            int failed = 0;
+
             using WordDocumentGenerator generator = new();
+
             generator.Generate(
                 templatePath,
                 outputPath,
                 table,
-                (Word.WdSaveFormat)configuration.Output.WdSaveFormat);
+                (fileName, error) =>
+                {
+                    if (error is null)
+                    {
+                        generated++;
+                        Log("✔", fileName);
+                    }
+                    else
+                    {
+                        failed++;
+                        Log("✖", $"{fileName} [{error}]");
+                    }
+                },
+                (Word.WdSaveFormat)
+                    configuration.Output.WdSaveFormat);
 
-            Logger.Info("Mail merge completed successfully");
-            return 0;
+            string status =
+                failed == 0 ? "✔" : "⚠";
+
+            Log(
+                status,
+                $"Completed — {generated} generated, {failed} failed");
+
+            return failed == 0 ? 0 : 1;
         }
-        catch (FileNotFoundException fnf)
+        catch (FileNotFoundException ex)
         {
-            Logger.Error(fnf, "Required file missing: {File}", fnf.FileName);
+            Log(
+                "✖",
+                $"{Path.GetFileName(ex.FileName)} [File not found]");
+
             return 2;
         }
-        catch (UnauthorizedAccessException ua)
+        catch (UnauthorizedAccessException)
         {
-            Logger.Error(ua, "Permission denied");
+            Log("✖", "Access denied");
             return 3;
         }
-        catch (IOException ioEx)
+        catch (IOException ex)
         {
-            Logger.Error(ioEx, "I/O error while accessing files");
+            Log("✖", $"I/O error [{ex.Message}]");
             return 4;
         }
-        catch (System.Runtime.InteropServices.COMException comEx)
+        catch (System.Runtime.InteropServices.COMException ex)
         {
-            Logger.Error(comEx, "Word interop or COM error");
+            Log("✖", $"Office error [{ex.Message}]");
             return 5;
         }
-        catch (InvalidOperationException inv)
+        catch (InvalidOperationException ex)
         {
-            Logger.Error(inv, "Invalid operation / configuration problem");
+            Log("✖", ex.Message);
             return 1;
         }
         catch (Exception ex)
         {
-            Logger.Error(ex, "Unexpected error");
+            Log("✖", ex.Message);
             return 99;
         }
-        finally
-        {
-            Logger.Close();
-        }
+    }
+
+    private static void Log(
+        string symbol,
+        string message)
+    {
+        Console.WriteLine(
+            $"[{DateTime.Now:HH:mm:ss}] {symbol} {message}");
     }
 }
