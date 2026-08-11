@@ -1,32 +1,41 @@
 # MailMerge
 
-A simple and configurable C# tool for generating personalized documents from a Microsoft Word template and structured data.
-
-The project is designed to automate repetitive document generation while keeping the template, input data, and output configuration separate. Configuration is handled through a JSON file, making the tool easy to adapt without modifying the source code.
+A configurable C# tool for generating personalized Word documents from Excel data and a DOCX template.
 
 ## Features
 
-* Uses a `.docx` template as the document source
-* Generates personalized documents automatically
+* Generate multiple documents from a single Word template
+* Import data from Excel spreadsheets
 * Configurable through `Configuration.json`
-* Supports relative and absolute file paths
-* Separates configuration, processing logic, and output handling
-* Designed to be simple, lightweight, and easy to extend
+* Support for relative and absolute paths
+* Export imported data to `Table.json`
+* Separated components for importing, processing, and document generation
 
-## Use Cases
+## Usage
 
-Useful for generating certificates, letters, invoices, notices, reports, forms, and other documents where the same template needs to be populated with different data.
+1. Prepare a `.docx` template with your merge fields.
+2. Prepare an Excel spreadsheet containing the corresponding data.
+3. Configure the template, data, and output paths in `Configuration.json`.
+4. Run the application.
 
-## Configuration
+The application processes the spreadsheet and generates personalized documents from the Word template.
 
-The application uses a JSON configuration file to define the template and output locations, keeping environment-specific settings outside the application code.
+## Project Structure
+
+The application separates the main responsibilities into components such as:
+
+* `ExcelImporter` — imports data from Excel
+* `TableWriter` — writes the imported data to JSON
+* `WordDocumentGenerator` — generates documents from the template
+* `MailMergeApplication` — coordinates the workflow
 
 ## Requirements
 
 * Windows
 * .NET
-* Microsoft Word-compatible `.docx` templates
+* A `.docx` Word template
+* An Excel spreadsheet
 
-## Status
+## License
 
-This project is actively developed and may evolve as additional mail-merge features are added.
+This project is licensed under the [MIT License](LICENSE).
