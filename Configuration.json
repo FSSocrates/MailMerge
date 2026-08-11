@@ -1,0 +1,36 @@
+{
+  "_comment0": "Configuration.json",
+  "_comment1": "This is an exemplary configuration template. Values aren't to be taken literally.",
+
+  "template": {
+    "_comment2": "The relative or absolute path to the template document source.",
+    "path": ".\\Template.docx"
+  },
+
+  "output": {
+    "_comment3": "The relative or absolute path to the destination folder.",
+    "path": ".\\Output\\",
+
+    "_comment4": "The filename template array for concatenation.",
+    "_comment5": "Even-indexed (i.e. first, third, fifth, etc.) elements are literal text.",
+    "_comment6": "Odd-indexed (i.e. second, fourth, sixth, etc.) elements are placeholder names.",
+    "filenameTemplate": ["", "abc", "", "def", " de - ", "def"],
+
+    "_comment7": "The WdSaveFormat index of the output file.",
+    "wdSaveFormat": 17
+  },
+
+  "data": {
+    "_comment8": "The relative or absolute path to the data worksheet source.",
+    "path": ".\\Data.xlsx",
+
+    "_comment9": "The name of the sheet containing data.",
+    "sheet": "Sheet1",
+
+    "_comment10": "Placeholder names in the document and filename template mapped to their worksheet ranges.",
+    "ranges": {
+      "abc": "A2:A4",
+      "def": "B2"
+    }
+  }
+}
