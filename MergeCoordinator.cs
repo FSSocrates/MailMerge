@@ -1,9 +1,9 @@
-public sealed class MailMergeApplication
+public sealed class MergeCoordinator
 {
     private readonly Configuration configuration;
     private readonly string baseDirectory;
 
-    public MailMergeApplication(
+    public MergeCoordinator(
         Configuration configuration,
         string configPath)
     {
