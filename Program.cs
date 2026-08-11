@@ -13,7 +13,7 @@ internal static class Program
             Configuration configuration =
                 ConfigurationLoader.Load(configPath);
 
-            new MailMergeApplication(
+            new MergeCoordinator(
                 configuration,
                 configPath).Run();
         }
