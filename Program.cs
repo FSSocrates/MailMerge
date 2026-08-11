@@ -13,74 +13,45 @@ internal static class Program
             Configuration configuration =
                 ConfigurationLoader.Load(configPath);
 
-            new Coordinator(
-                configuration,
-                configPath).Run();
+            string templatePath = Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory,
+                configuration.Template.Path));
+
+            string dataPath = Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory,
+                configuration.Data.Path));
+
+            string outputPath = Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory,
+                configuration.Output.Path));
+
+            MailMergeTable table =
+                new ExcelImporter().Import(
+                    dataPath,
+                    configuration.Data.Sheet,
+                    configuration.Data.Ranges,
+                    configuration.Output.FilenameTemplate);
+
+            TableWriter.Write(
+                Path.Combine(AppContext.BaseDirectory, "Table.json"),
+                table);
+
+            if (table.RowCount == 0)
+                return;
+
+            using WordDocumentGenerator generator = new();
+
+            generator.Generate(
+                templatePath,
+                outputPath,
+                table,
+                (Word.WdSaveFormat)
+                    configuration.Output.WdSaveFormat);
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine(ex);
+            Environment.ExitCode = 1;
         }
-    }
-}
-
-public sealed class Coordinator
-{
-    private readonly Configuration configuration;
-    private readonly string baseDirectory;
-
-    public Coordinator(
-        Configuration configuration,
-        string configPath)
-    {
-        this.configuration = configuration;
-
-        baseDirectory = Path.GetDirectoryName(
-            Path.GetFullPath(configPath))!;
-    }
-
-    public void Run()
-    {
-        string templatePath =
-            Resolve(configuration.Template.Path);
-
-        string dataPath =
-            Resolve(configuration.Data.Path);
-
-        string outputPath =
-            Resolve(configuration.Output.Path);
-
-        ExcelImporter importer = new();
-
-        MailMergeTable table =
-            importer.Import(
-                dataPath,
-                configuration.Data.Sheet,
-                configuration.Data.Ranges,
-                configuration.Output.FilenameTemplate);
-
-        TableWriter.Write(
-            Path.Combine(
-                baseDirectory,
-                "Table.json"),
-            table);
-
-        if (table.RowCount == 0)
-            return;
-
-        using WordDocumentGenerator generator = new();
-
-        generator.Generate(
-            templatePath,
-            outputPath,
-            table,
-            (Microsoft.Office.Interop.Word.WdSaveFormat)
-                configuration.Output.WdSaveFormat);
-    }
-
-    private string Resolve(string path)
-    {
-        return Path.GetFullPath(
-            Path.Combine(baseDirectory, path));
     }
 }
